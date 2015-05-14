@@ -4,6 +4,7 @@ This project uses data from activity monitoring devices such as a Fitbit, Nike F
 
 ## Loading and preprocessing the data
 The steps taken are:
+
 1. download archive
 2. unzip archive
 3. remove temporary file

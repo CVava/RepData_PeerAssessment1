@@ -67,7 +67,13 @@ img {
 <p>This project uses data from activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. Data consists of the number of steps collected at 5 minutes interval from an anonymous individual during the months of October and November, 2012. Raw data is available at: <a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip">https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip</a>.</p>
 <div id="loading-and-preprocessing-the-data" class="section level2">
 <h2>Loading and preprocessing the data</h2>
-<p>The steps taken are: 1. download archive 2. unzip archive 3. remove temporary file 4. load data file</p>
+<p>The steps taken are:</p>
+<ol style="list-style-type: decimal">
+<li>download archive</li>
+<li>unzip archive</li>
+<li>remove temporary file</li>
+<li>load data file</li>
+</ol>
 <pre class="r"><code>fileUrl&lt;-&quot;http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip&quot;
 download.file(fileUrl, destfile=&quot;temp.zip&quot;)
 unzip(&quot;temp.zip&quot;, files = NULL, list = FALSE, overwrite = TRUE, 
