@@ -1,0 +1,166 @@
+---
+title: "Reproducible Research Project 1"
+output:
+  html_document:
+    keep_md: yes
+---
+
+This project uses data from activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. Data consists of the number of steps collected at 5 minutes interval from an anonymous individual during the months of October and November, 2012. Raw data is available at: <https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip>.
+
+## Loading and preprocessing the data
+The steps taken are:
+1. download archive
+2. unzip archive
+3. remove temporary file
+4. load data file
+
+```{r}
+fileUrl<-"http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(fileUrl, destfile="temp.zip")
+unzip("temp.zip", files = NULL, list = FALSE, overwrite = TRUE, 
+junkpaths = FALSE, unzip = "internal", setTimes = FALSE)
+unlink("temp.zip")
+
+activity <- read.csv("activity.csv", header=TRUE)
+```
+
+A quick view into the data file content:
+```{r echo = TRUE}
+head(activity)
+```
+
+The variables included in this dataset are:
+
+1. **steps**: Number of steps taking in a 5-minute interval (missing values are coded as NA)
+
+2. **date**: The date on which the measurement was taken in YYYY-MM-DD format
+
+3. **interval**: Identifier for the 5-minute interval in which measurement was taken
+
+## Total number of steps taken per day
+For this part will start with some data preprocessing:
+
+* load libraries that may be needed
+* missing values in the dataset will be ignored by removing rows with **steps** values of 'NA'
+* resulting data will be converted into a *tbl_df* format 
+* the report file will be created by first grouping rows by **date** then computing the sums of **steps** column.
+
+```{r echo = TRUE, message = FALSE}
+library(dplyr)
+library(chron)
+library(lattice)
+
+CleanAct <- activity[!is.na(activity$steps), ]
+act <- tbl_df(CleanAct)
+DailyStepsClean <- summarise(group_by(act, date), SumSteps = sum(steps))
+```
+
+1. Total number of steps taken per day
+```{r echo = TRUE}
+DailyStepsClean
+```
+
+2. Histogram of the total number of steps taken each day
+```{r echo = TRUE}
+hist(DailyStepsClean$SumSteps, breaks=10, main = "Sum of Daily Steps Histogram", col="red", xlab="Sum of Daily Steps")
+```
+
+3. Mean of the total number of steps taken per day
+```{r echo = TRUE}
+MeanDailyStepsClean <- summarise(group_by(act, date), MeanSteps = mean(steps))
+summary(MeanDailyStepsClean)
+head(MeanDailyStepsClean)
+```
+
+4. Median of the total number of steps taken per day
+```{r echo = TRUE}
+MedianDailyStepsClean <- summarise(group_by(act, date), MeanSteps = median(steps))
+summary(MedianDailyStepsClean)
+head(MedianDailyStepsClean)
+```
+
+## Average daily activity pattern
+
+1. Time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r echo = TRUE}
+IntervalStepsClean <- summarise(group_by(act, interval), IntervalMeanSteps = mean(steps))
+plot(IntervalStepsClean$interval, IntervalStepsClean$IntervalMeanSteps, type= 'l', ylab="Average number of steps taken", xlab="Interval", main="Average number of steps per interval")
+```
+
+2. Which 5-minute interval, on average across all the days in the dataset contains the maximum number of steps?
+```{r echo = TRUE}
+# IntervalStepsClean <- summarise(group_by(act, interval), IntervalMeanSteps = mean(steps))
+IntervalStepsClean[which(IntervalStepsClean$IntervalMeanSteps == max(IntervalStepsClean$IntervalMeanSteps)), ]
+```
+
+## Inputting Missing Values
+
+There are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some data calculations or summaries.
+
+1. Calculate and report the total number of missing values in the dataset
+```{r echo = TRUE}
+length(activity[is.na(activity$steps), 1])
+```
+
+2. Create a new dataset that is equal to the original dataset but with the missing data filled in with the interval mean over all days in the set.
+
+```{r echo = TRUE}
+FilledAct <- activity
+for (row in 1:length(activity[, 1])) {
+  if (is.na(activity[row, 'steps'])) {
+    FilledAct[row, 'steps'] = IntervalStepsClean[which(IntervalStepsClean[ ,'interval'] == activity[row, 'interval']), 'IntervalMeanSteps']
+  }
+}
+```
+
+3. Histogram of the total number of steps taken each day 
+```{r echo = TRUE}
+DailyStepsFilled <- summarise(group_by(FilledAct, date), SumSteps = sum(steps))
+hist(DailyStepsFilled$SumSteps, breaks=10, main = "Histogram of Daily Steps with Filled In Data", 
+  col="red", xlab="Daily Steps")
+```
+
+4. Calculate and report the mean total number of steps taken per day. 
+```{r echo = TRUE}
+MeanDailyStepsFilled <- summarise(group_by(FilledAct, date), MeanSteps = mean(steps))
+head(MeanDailyStepsFilled)
+```
+
+5. Calculate and report the median total number of steps taken per day. 
+```{r echo = TRUE}
+MedianDailyStepsFilled <- summarise(group_by(FilledAct, date), MeanSteps = median(steps))
+head(MedianDailyStepsFilled)
+```
+
+6. Do these values differ from the estimates from the first part of the assignment?
+
+Apparently there are two types of differences:  
+
+* The Filled In data set has values for all days compared to he Clean data set  
+* Individual values differ somehow  
+
+What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+* By comparing the two histograms the values appear more concentrated towards the average
+* If approximated by a normal distribution the standard deviation appears smaller fot the Filled In data set
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+
+The data has been first grouped by day type and interval then summarised by taken the mean of steps.
+```{r echo = TRUE}
+DaytypeFilledAct <- cbind(FilledAct, is.weekend(as.Date(FilledAct$date)))
+names(DaytypeFilledAct)[4] <- 'Daytype'
+
+MeanIntervalStepsFilled <- summarise(group_by(DaytypeFilledAct, Daytype, interval), MeanSteps = mean(steps))
+MeanIntervalStepsFilled$Daytype <- factor(MeanIntervalStepsFilled$Daytype)
+levels(MeanIntervalStepsFilled$Daytype) <- c('Weekday', 'Weekend')
+```
+
+2. Time series panel plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). 
+
+```{r echo = TRUE}
+xyplot(MeanSteps ~ interval | Daytype, type='l', data = MeanIntervalStepsFilled, xlab = "Interval", ylab = "Number of steps", layout=c(1,2))
+```
